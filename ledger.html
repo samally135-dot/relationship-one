@@ -102,6 +102,12 @@
           <input type="range" min="1" max="10" x-model.number="form.happiness" class="w-full accent-amber-500 h-2 bg-slate-700 rounded-lg cursor-pointer">
         </div>
 
+        <!-- 新增：感想格 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-indigo-500/30 space-y-2">
+          <label class="text-xs text-indigo-400 font-bold block">💬 今日總結與感想</label>
+          <textarea x-model="form.reflection" rows="2" placeholder="寫下你對這段關係或這次互動的感悟與反思..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-400"></textarea>
+        </div>
+
         <!-- 送出按鈕 -->
         <button type="button" @click="submitToCloud()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-base shadow-xl transition-all">
           🚀 上傳至雲端並前往佈告欄
@@ -155,6 +161,12 @@
               </div>
             </div>
 
+            <!-- 感想呈現區塊（如果有填寫才顯示） -->
+            <div x-show="post.reflection" class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/30 text-xs space-y-1">
+              <span class="text-indigo-400 font-bold block">💬 總結與感想</span>
+              <p class="text-slate-300 whitespace-pre-wrap leading-relaxed" x-text="post.reflection"></p>
+            </div>
+
             <div class="flex justify-end pt-1">
               <button @click="likePost(post.id)" class="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-700/60 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-600 transition-all">
                 <span>❤️</span>
@@ -169,7 +181,6 @@
   </main>
 
   <script>
-    // 已自動對應你剛才建立的 Firebase 專案設定[cite: 5]
     const firebaseConfig = {
       apiKey: "AIzaSyBVHGINoSRfMETVX9ts_JRRgWCKqxBmFbmM",
       authDomain: "relationship-ledger.firebaseapp.com",
@@ -195,7 +206,8 @@
           costDesc: '', 
           rewardScore: 7, 
           rewardDesc: '', 
-          happiness: 8 
+          happiness: 8,
+          reflection: '' 
         },
         posts: [],
 
@@ -241,6 +253,7 @@
             rewardScore: this.form.rewardScore,
             rewardDesc: this.form.rewardDesc,
             happiness: this.form.happiness,
+            reflection: this.form.reflection,
             net: net,
             tag: tag,
             likes: 0,
@@ -251,6 +264,7 @@
             if (!error) {
               this.form.costDesc = '';
               this.form.rewardDesc = '';
+              this.form.reflection = '';
               this.currentTab = 'board';
             } else {
               alert('上傳失敗，請稍後再試！');
