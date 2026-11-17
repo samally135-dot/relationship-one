@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>社會投資理論 - 雲端關係帳本</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- 引入 Firebase 雲端資料庫 SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    input, select, textarea { font-size: 16px !important; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24" x-data="appData()">
+
+  <!-- 頂部 Header & 頁面切換導覽列 -->
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-50 px-4 py-3 shadow-md">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <h1 class="font-bold text-lg text-emerald-400 flex items-center gap-1.5">
+        <span>📖</span> 雲端關係帳本
+      </h1>
+      
+      <!-- 兩頁式切換按鈕 -->
+      <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-700">
+        <button @click="currentTab = 'form'" 
+          :class="currentTab === 'form' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all">
+          ✍️ 記帳
+        </button>
+        <button @click="currentTab = 'board'" 
+          :class="currentTab === 'board' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1">
+          <span>📌 雲端佈告欄</span>
+          <span class="bg-slate-800 px-1.5 py-0.2 rounded-full text-[10px]" x-text="posts.length"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-6">
+
+    <!-- ================= 第一頁：輸入表單 ================= -->
+    <section x-show="currentTab === 'form'" x-transition class="space-y-5">
+      <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
+        <h2 class="text-md font-semibold text-slate-200 border-b border-slate-700 pb-2 flex justify-between items-center">
+          <span>📝 記下一筆關係投資</span>
+          <span class="text-xs text-slate-400">同步至雲端</span>
+        </h2>
+
+        <!-- 身分設定 -->
+        <div class="space-y-2">
+          <label class="text-xs text-slate-300 font-medium">發布身份</label>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+              <input type="checkbox" x-model="form.isAnonymous" class="rounded bg-slate-700 text-emerald-500">
+              <span>匿名發布</span>
+            </label>
+            <input x-show="!form.isAnonymous" type="text" x-model="form.nickname" placeholder="請輸入您的暱稱" class="flex-1 bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-400">
+          </div>
+        </div>
+
+        <!-- 關係類型 -->
+        <div class="space-y-2">
+          <label class="text-xs text-slate-300 font-medium">關係類型</label>
+          <div class="grid grid-cols-3 gap-2">
+            <template x-for="type in ['親情', '友情', '愛情']" :key="type">
+              <button type="button" @click="form.relationType = type"
+                :class="form.relationType === type ? 'bg-emerald-600 text-white border-emerald-500 shadow' : 'bg-slate-700/50 text-slate-400 border-slate-600'"
+                class="py-2.5 border rounded-xl text-sm font-medium transition-all" x-text="type"></button>
+            </template>
+          </div>
+        </div>
+
+        <!-- 成本大輸入框 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-red-500/30 space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-red-400 font-bold">🔴 付出成本 (Cost)</span>
+            <span class="text-red-400 font-bold text-sm" x-text="form.costScore + ' 分'"></span>
+          </div>
+          <textarea x-model="form.costDesc" rows="3" placeholder="請在此詳細輸入您付出的時間、金錢、精神或代價..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-red-400"></textarea>
+          <input type="range" min="1" max="10" x-model.number="form.costScore" class="w-full accent-red-500 h-2 bg-slate-700 rounded-lg cursor-pointer">
+        </div>
+
+        <!-- 報酬大輸入框 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-emerald-500/30 space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-emerald-400 font-bold">🟢 獲得報酬 (Reward)</span>
+            <span class="text-emerald-400 font-bold text-sm" x-text="form.rewardScore + ' 分'"></span>
+          </div>
+          <textarea x-model="form.rewardDesc" rows="3" placeholder="請在此詳細輸入您得到的金錢、情感回饋或收穫..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-400"></textarea>
+          <input type="range" min="1" max="10" x-model.number="form.rewardScore" class="w-full accent-emerald-500 h-2 bg-slate-700 rounded-lg cursor-pointer">
+        </div>
+
+        <!-- 幸福感 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-amber-500/30 space-y-2">
+          <div class="flex justify-between text-xs text-amber-400">
+            <span class="font-bold">✨ 幸福感指數 <span x-text="getEmoji(form.happiness)"></span></span>
+            <span class="font-bold text-sm" x-text="form.happiness + ' / 10'"></span>
+          </div>
+          <input type="range" min="1" max="10" x-model.number="form.happiness" class="w-full accent-amber-500 h-2 bg-slate-700 rounded-lg cursor-pointer">
+        </div>
+
+        <!-- 送出按鈕 -->
+        <button type="button" @click="submitToCloud()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-base shadow-xl transition-all">
+          🚀 上傳至雲端並前往佈告欄
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ================= 第二頁：佈告欄列表 ================= -->
+    <section x-show="currentTab === 'board'" x-transition class="space-y-4">
+      <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700 shadow">
+        <h3 class="text-sm font-bold text-slate-200">📌 大家的心得與帳本</h3>
+        
+        <!-- 分類篩選 -->
+        <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
+          <template x-for="f in ['全部', '親情', '友情', '愛情']" :key="f">
+            <button @click="filter = f" :class="filter === f ? 'bg-slate-700 text-emerald-400 font-bold' : 'text-slate-400'" class="px-2.5 py-1 rounded text-xs transition-all" x-text="f"></button>
+          </template>
+        </div>
+      </div>
+
+      <!-- 貼文列表 -->
+      <div class="space-y-3">
+        <template x-for="post in filteredPosts" :key="post.id">
+          <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-3 shadow-xl">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-sm text-slate-100" x-text="post.nickname"></span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-emerald-400 font-medium" x-text="post.relationType"></span>
+                </div>
+                <span class="text-[10px] text-slate-400" x-text="post.time"></span>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full shadow" :class="post.net >= 0 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-red-950 text-red-400 border border-red-800'" x-text="'淨值 ' + (post.net > 0 ? '+' : '') + post.net"></span>
+            </div>
+
+            <div class="flex gap-2">
+              <span class="text-xs px-2.5 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-800/50">幸福感 <span x-text="post.happiness"></span>/10</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-lg bg-slate-700/80 text-slate-300 font-medium" x-text="post.tag"></span>
+            </div>
+
+            <!-- 寬敞的成本與報酬對比區塊 -->
+            <div class="grid grid-cols-2 gap-2 text-xs bg-slate-900/80 p-3 rounded-xl border border-slate-700/60">
+              <div class="border-r border-slate-700 pr-2">
+                <span class="text-red-400 font-bold block mb-1">🔴 成本 (<span x-text="post.costScore"></span>分)</span>
+                <p class="text-slate-300 whitespace-pre-wrap leading-relaxed" x-text="post.costDesc || '無'"></p>
+              </div>
+              <div class="pl-1">
+                <span class="text-emerald-400 font-bold block mb-1">🟢 報酬 (<span x-text="post.rewardScore"></span>分)</span>
+                <p class="text-slate-300 whitespace-pre-wrap leading-relaxed" x-text="post.rewardDesc || '無'"></p>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              <button @click="likePost(post.id)" class="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-700/60 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-600 transition-all">
+                <span>❤️</span>
+                <span x-text="post.likes"></span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // 已自動對應你剛才建立的 Firebase 專案設定[cite: 5]
+    const firebaseConfig = {
+      apiKey: "AIzaSyBVHGINoSRfMETVX9ts_JRRgWCKqxBmFbmM",
+      authDomain: "relationship-ledger.firebaseapp.com",
+      databaseURL: "https://relationship-ledger-default-rtdb.firebaseio.com/",
+      projectId: "relationship-ledger",
+      storageBucket: "relationship-ledger.firebasestorage.app",
+      messagingSenderId: "579878838687",
+      appId: "1:579878838687:web:83a2015a0be148f0b5ddaa"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function appData() {
+      return {
+        currentTab: 'form',
+        filter: '全部',
+        form: { 
+          isAnonymous: true, 
+          nickname: '', 
+          relationType: '愛情', 
+          costScore: 5, 
+          costDesc: '', 
+          rewardScore: 7, 
+          rewardDesc: '', 
+          happiness: 8 
+        },
+        posts: [],
+
+        init() {
+          db.ref('posts').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              this.posts = Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+              })).reverse();
+            } else {
+              this.posts = [];
+            }
+          });
+        },
+
+        get filteredPosts() {
+          if (this.filter === '全部') return this.posts;
+          return this.posts.filter(p => p.relationType === this.filter);
+        },
+
+        getEmoji(v) {
+          if (v >= 8) return '🥰';
+          if (v >= 6) return '😊';
+          if (v >= 4) return '😐';
+          return '😔';
+        },
+
+        submitToCloud() {
+          const net = this.form.rewardScore - this.form.costScore;
+          let tag = '平衡狀態';
+          if (net >= 4) tag = '高品質滋養';
+          else if (net >= 2) tag = '穩健獲利';
+          else if (net <= -3) tag = '嚴重透支警訊';
+          else if (net < 0) tag = '情感赤字';
+
+          const newPost = {
+            nickname: this.form.isAnonymous ? '匿名' : (this.form.nickname || '路人'),
+            relationType: this.form.relationType,
+            costScore: this.form.costScore,
+            costDesc: this.form.costDesc,
+            rewardScore: this.form.rewardScore,
+            rewardDesc: this.form.rewardDesc,
+            happiness: this.form.happiness,
+            net: net,
+            tag: tag,
+            likes: 0,
+            time: new Date().toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+          };
+
+          db.ref('posts').push(newPost, (error) => {
+            if (!error) {
+              this.form.costDesc = '';
+              this.form.rewardDesc = '';
+              this.currentTab = 'board';
+            } else {
+              alert('上傳失敗，請稍後再試！');
+            }
+          });
+        },
+
+        likePost(id) {
+          const postRef = db.ref('posts/' + id);
+          postRef.once('value', (snapshot) => {
+            const post = snapshot.val();
+            if (post) {
+              postRef.update({ likes: (post.likes || 0) + 1 });
+            }
+          });
+        }
+      }
+    }
+  </script>
+</body>
+  </html>
